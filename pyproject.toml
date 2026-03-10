@@ -3,8 +3,15 @@ name = "gtf-parser"
 version = "0.1.0"
 description = "Parse GTF/GFF3 files: extract fields, convert to BED, and more."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
+maintainers = [
+    { name = "Edoardo Giacopuzzi", email = "edoardo.giacopuzzi@fht.org" },
+]
 dependencies = []
+
+[project.urls]
+Repository = "https://github.com/HTGenomeAnalysisUnit/gtf-parser"
 
 [project.scripts]
 gtf-parser = "gtf_parser.cli:main"
