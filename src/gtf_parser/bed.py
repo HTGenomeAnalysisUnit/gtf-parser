@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Set
 import sys
 from pathlib import Path
 from typing import TextIO
 
-from .parser import Record, parse
+from .parser import parse
 
 
 def to_bed(
@@ -16,6 +17,8 @@ def to_bed(
     id_separator: str = "|",
     output: TextIO | None = None,
     deduplicate: bool = True,
+    index_path: str | Path | None = None,
+    attribute_filters: Mapping[str, Set[str]] | None = None,
 ) -> None:
     """Convert GTF/GFF3 records of a given feature type to BED6 format.
 
@@ -40,11 +43,20 @@ def to_bed(
         Writable text stream (default: stdout).
     deduplicate:
         If ``True``, skip duplicate BED lines.
+    index_path:
+        Optional SQLite index path created with ``gtf-parser index``.
+    attribute_filters:
+        Optional attribute filters in the form ``{key: {value1, value2}}``.
     """
     out = output or sys.stdout
     seen: set[str] | None = set() if deduplicate else None
 
-    for record in parse(source, feature_types={feature_type}):
+    for record in parse(
+        source,
+        feature_types={feature_type},
+        index_path=index_path,
+        attribute_filters=attribute_filters,
+    ):
         name = id_separator.join(record.get(f) or "" for f in id_fields)
         # BED is 0-based half-open; GTF/GFF are 1-based inclusive
         bed_start = record.start - 1

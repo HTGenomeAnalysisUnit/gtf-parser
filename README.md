@@ -44,6 +44,40 @@ gtf-parser extract genes.gtf -t exon -f gene_id transcript_id exon_number -o exo
 gtf-parser extract genes.gtf -t exon -f gene_id --no-dedup
 ```
 
+### Build and use an index for faster repeated queries
+
+For large files and repeated lookups (for example repeatedly querying
+`-t gene`), build an index once and reuse it.
+
+```bash
+# Build index (prints output index path)
+gtf-parser index genes.gtf
+
+# Rebuild index after parser/index upgrades or source file changes
+gtf-parser index genes.gtf --force
+
+# Build a smaller/faster index for specific queries
+gtf-parser index genes.gtf -t gene -k gene_id gene_name
+
+# Use index for extraction
+gtf-parser extract genes.gtf -t gene -f gene_id gene_name --index genes.gtf.idx.sqlite
+
+# Use index for BED conversion
+gtf-parser bed genes.gtf gene -i gene_id gene_name --index genes.gtf.idx.sqlite
+
+# Retrieve one specific gene quickly by key
+gtf-parser extract genes.gtf -t gene -f gene_id gene_name --index genes.gtf.idx.sqlite --where gene_id=ENSG00000141510
+
+# Multiple accepted values for the same key
+gtf-parser extract genes.gtf -t gene -f gene_id gene_name --index genes.gtf.idx.sqlite --where gene_id=ENSG1,ENSG2
+
+# Combine filters (AND across keys)
+gtf-parser extract genes.gtf -t transcript -f transcript_id gene_id --index genes.gtf.idx.sqlite --where gene_id=ENSG1 --where transcript_id=ENST1
+```
+
+If an index is stale/incompatible or does not cover requested feature types/keys,
+the CLI prints a warning and falls back to plain file parsing.
+
 ### Convert to BED
 
 Convert features of a given type to BED6 format. The `name` column is built
@@ -71,10 +105,24 @@ The format is auto-detected from the first data line.
 ## Python API
 
 ```python
+from gtf_parser.parser import build_index, parse
+
+idx = build_index("genes.gtf")
+
+for record in parse("genes.gtf", feature_types={"gene"}, index_path=idx):
+    print(record.seqname, record.get("gene_id"), record.get("gene_name"))
+```
+
+```python
 from gtf_parser.parser import parse
 
-for record in parse("genes.gtf", feature_types={"gene"}):
-    print(record.seqname, record.get("gene_id"), record.get("gene_name"))
+for record in parse(
+    "genes.gtf",
+    feature_types={"gene"},
+    index_path="genes.gtf.idx.sqlite",
+    attribute_filters={"gene_id": {"ENSG00000141510"}},
+):
+    print(record.get("gene_id"), record.get("gene_name"))
 ```
 
 ```python
